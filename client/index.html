@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png" />
+  <title>Rock, Paper, Scissors</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="score-board">
+      <div class="score-board_title">
+        <img src="images/logo.svg" alt="Rock-paper-Scissors" />
+      </div>
+      <div class="score-board_score">
+        <p>Score</p>
+        <h1 id="score">0</h1>
+      </div>
+    </div>
+
+    <div class="game-hands">
+      <div class="rock">
+        <img src="images/Rock.png" alt="rock" onclick="userPick('Rock')" />
+      </div>
+      <div class="paper">
+        <img src="images/Paper.png" alt="paper" onclick="userPick('Paper')" />
+      </div>
+      <div class="scissors">
+        <img src="images/Scissors.png" alt="scissors" onclick="userPick('Scissors')" />
+      </div>
+    </div>
+
+    <div class="contest">
+      <div class="userHand">
+        <h2>You picked</h2>
+        <div class="userHand-img hand">
+          <img id="user-pick" src="images/Paper.png" alt="">
+        </div>
+      </div>
+      <div class="result">
+        <h1 id="decision">You win</h1>
+        <button onclick="restartGame()">Play Again</button>
+      </div>
+      <div class="computerHand">
+        <h2>Computer picked</h2>
+        <div class="computerHand-img hand">
+          <img id="computer-pick" src="images/Rock.png" alt="">
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-view">
+      <div class="mobile-contest">
+        <div class="mobileUserHand">
+          <h2>You picked</h2>
+          <div class="mobile-userHand-img hand">
+            <img id="mobile-user-pick" src="images/Paper.png" alt="">
+          </div>
+        </div>
+        <div class="mobileComputerHand">
+          <h2>Computer picked</h2>
+          <div class="mobile-computerHand-img hand">
+            <img id="mobile-computer-pick" src="images/Rock.png" alt="">
+          </div>
+        </div>
+      </div>
+      <div class="mobile-result-display">
+        <div class="mobile-result">
+          <h1 id="mobile-decision">You win</h1>
+          <button onclick="restartGame()">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

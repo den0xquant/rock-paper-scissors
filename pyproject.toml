@@ -1,0 +1,17 @@
+[project]
+name = "rock-paper-scissors"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiogram>=3.22.0",
+    "fastapi[standard]>=0.116.1",
+    "motor>=3.7.1",
+    "pydantic-settings>=2.10.1",
+    "pyjwt>=2.10.1",
+    "redis>=6.4.0",
+    "sqlmodel>=0.0.24",
+    "tomlkit>=0.13.3",
+    "uvicorn>=0.35.0",
+]
