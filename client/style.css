@@ -1,317 +1,366 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&display=swap');
 
-
+/* ===== BASE ===== */
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    box-sizing: border-box
+}
+
+html,
+body {
+    height: 100%
 }
 
 body {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    background: linear-gradient( hsl(214, 47%, 23%), hsl(237, 49%, 15%));
+    font-family: 'Barlow Semi Condensed', system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    color: #f6f7fb;
+    background:
+        radial-gradient(1200px 800px at 80% 10%, #1d1e37 0%, transparent 60%),
+        radial-gradient(900px 600px at 10% 90%, #121329 0%, transparent 60%),
+        linear-gradient(180deg, hsl(214, 47%, 23%), hsl(237, 49%, 15%));
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
 }
 
 .wrapper {
-    display:  flex;
-    flex-direction: column;
+    height: 100dvh;
+    max-width: 980px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
     align-items: center;
+    justify-items: stretch;
+    padding: 16px;
+    gap: 42px;
 }
 
-.score-board{
-    width: 700px;
-    border: 2px solid hsl(217, 16%, 45%);
-    border-radius: 13px;
-    padding: 10px 0;
-    margin-top: 60px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* ===== SCOREBOARD (TABLE) ===== */
+.match-board {
+    width: 100%
 }
 
-.score-board_title {
-    margin-left: 30px;
+.board-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    table-layout: fixed;
+    background: rgba(255, 255, 255, .03);
+    border-radius: 16px;
+    overflow: hidden;
 }
 
-.score-board_score {
-    width: 110px;
-    height: 90px;
-    background-color: white;
-    border-radius: 8px;
-    margin-right: 30px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+.board-table tr:first-child td {
+    padding: 14px 16px 6px 16px;
+    vertical-align: bottom;
 }
 
-.score-board_score h1 {
-    color: hsl(229, 25%, 31%);
-    font-size: 45px;
+.board-table tr:not(:first-child) td {
+    padding: 10px 16px;
+    vertical-align: middle;
 }
 
-.score-board_score p {
-    color: hsl(229, 64%, 46%);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+.board-left {
+    width: 60%
 }
 
-.game-hands{
-    width: 476px;
-    height: 430px;
-    margin: 100px 0;
+.board-right {
+    text-align: right
+}
+
+.logo {
+    max-height: 46px;
+    width: auto;
+    display: block
+}
+
+.bo-label {
+    color: #9aa0b4;
+    font-size: 14px
+}
+
+.board-side {
+    width: 180px;
+    font-weight: 700;
+    color: #c8cde2;
+    white-space: nowrap;
+}
+
+.stars-line .star {
+    font-size: 22px;
+    letter-spacing: 6px;
+    color: rgba(255, 255, 255, .18);
+    transition: color .18s ease;
+}
+
+.stars-line .star.filled {
+    color: #fff
+}
+
+/* ===== HANDS (TABLE) ===== */
+.game-hands {
+    width: 100%
+}
+
+.hands-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 24px 0;
+    table-layout: fixed;
     background-image: url("/images/bg-triangle.svg");
-    background-position: center;
+    background-position: center 38%;
     background-repeat: no-repeat;
-    visibility: visible;
-    opacity: 1;
-    position: relative;
-
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    z-index: 0;
-
+    background-size: min(440px, 78vw);
 }
- 
-.game-hands img {
-    width: 200px;
-    height: 200px;
+
+.hands-table td {
+    text-align: center;
+    padding: 12px 0;
+}
+
+.hand-cell img {
+    width: clamp(96px, 26vw, 170px);
+    height: clamp(96px, 26vw, 170px);
     display: block;
-  }
-
-
-.rock, .paper, .scissors {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    user-select: none;
+    -webkit-user-drag: none;
     cursor: pointer;
-    transition: all 0.3s;   
+    transition: transform .12s ease;
 }
 
-.rock {
-    margin-right: 20px;
-}
-  
-.paper {
-    margin-left: 20px;
+.hand-cell img:active {
+    transform: scale(.96)
 }
 
-.rock:hover, .paper:hover, .scissors:hover{
-    transform: translate3d(0px, -8px, 0px);
-}
-
+/* ===== CONTEST (TABLE) ===== */
 .contest {
-    width: 900px;
-    margin: 100px 0;
-    display: none;
-
+    width: 100%
 }
 
-.contest h2 {
-   margin-bottom: 25px;
-   color: white;
-   text-transform: uppercase;
-   font-size: 20px;
+.contest-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 18px;
+    table-layout: fixed;
 }
 
-.userHand , .result, .computerHand {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+.contest-col {
+    background: rgba(255, 255, 255, .05);
+    border-radius: 18px;
+    padding: 16px;
+    vertical-align: top;
+    text-align: center;
 }
 
-.result h1{
-    margin-bottom: 15px;
-    color: white;
-    font-size: 40px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 50px;
+.contest-col.center {
+    background: rgba(255, 255, 255, .03)
 }
 
-.result button {
-    padding: 10px 34px;
-    color: hsl(229, 25%, 31%);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1.3px;
-    line-height: 20px;
-    border-radius: 6px;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.result button:hover{
-    transform: translate3d(0px, -3px, 0px);  
-}
-
-.mobile-view{
-    display:  none;;
-}
-
-.mobile-contest {
-    margin-top: 50px;
-    display: none;
-    flex-wrap: nowrap;
-    align-items: center;
-    
-}
-
-
-.mobile-contest img {
-    width: 150px;
-    height: 150px;
-}
-
-.mobile-contest h2 {
-    margin-bottom: 25px;
-    color: white;
-    text-transform: uppercase;
-    font-size: 18px;
- }
-
-.mobileUserHand, .mobileComputerHand {
+.userHand,
+.oppHand {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    margin: 20px;
-} 
+    gap: 10px;
+}
 
-.mobile-result {
-    margin: 50px 0 100px 0;
-    display: none;
+.userHand h2,
+.oppHand h2 {
+    font-size: clamp(14px, 3.8vw, 18px);
+    color: #d8dcf0;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+}
+
+.userHand-img,
+.oppHand-img {
+    width: clamp(84px, 28vw, 160px);
+    height: clamp(84px, 28vw, 160px);
+    display: grid;
+    place-items: center;
+}
+
+.userHand-img img,
+.oppHand-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain
+}
+
+.result {
+    display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 12px;
+    min-height: 110px;
     justify-content: center;
 }
 
-.mobile-result h1{
-    margin-bottom: 15px;
-    color: white;
-    font-size: 40px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    line-height: 50px;
+#decision {
+    font-size: clamp(16px, 4.5vw, 22px);
+    letter-spacing: .4px;
+    line-height: 1.2;
+    text-align: center;
 }
 
-.mobile-result button {
-    padding: 10px 34px;
-    color: hsl(229, 25%, 31%);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1.3px;
-    line-height: 20px;
-    border-radius: 6px;
-    border: none;
-    outline: none;
+#decision.win {
+    color: #27e98c
+}
+
+#decision.lose {
+    color: #ff5171
+}
+
+#decision.draw {
+    color: #9aa0b4
+}
+
+#ready-btn.ready {
+    padding: 10px 18px;
+    border-radius: 14px;
+    background: #fff;
+    color: #111;
+    border: 0;
     cursor: pointer;
-    transition: all 0.3s;
+    font-weight: 700;
 }
 
-
-.mobile-result button:hover{
-    transform: translate3d(0px, -3px, 0px);  
+#ready-btn.ready[disabled] {
+    opacity: .6;
+    cursor: not-allowed
 }
 
+/* ===== OPP INDICATORS ===== */
+.loader {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 6px solid rgba(255, 255, 255, .18);
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+    margin: auto;
+    display: block;
+    /* по дефолту виден */
+}
 
-@media screen and (max-width: 870px) {
-    .score-board{
-        width: 500px;
+@keyframes spin {
+    to {
+        transform: rotate(360deg)
     }
-     
-    .game-hands img {
-        width: 150px;
-        height: 150px;
+}
+
+.ready-mark {
+    display: none;
+    width: 64px;
+    height: 64px;
+    margin: auto;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .25);
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+}
+
+/* ===== MOBILE (STACK) ===== */
+@media (max-width:640px) {
+    .wrapper {
+        gap: 28px;
+        padding: 12px
+    }
+
+    .board-table {
+        border-spacing: 0 4px
+    }
+
+    .board-side {
+        width: 140px
+    }
+
+    /* превращаем таблицы в блочные карточки */
+    .hands-table,
+    .contest-table {
+        border-spacing: 0
+    }
+
+    .hands-table tr,
+    .hands-table td,
+    .contest-table tr,
+    .contest-table td {
         display: block;
-      }
-
-      .userHand-img img {
-        width: 150px;
-        height: 150px;
-      }
-
-      .computerHand-img img {
-        width: 150px;
-        height: 150px;
-      }
-
-    
-}
-
-@media screen and (max-width:800px) {
-    .userHand , .result, .computerHand {
-        display: none;
+        width: 100%
     }
 
-    .contest {
-        margin-top: 0;
+    .hands-table td {
+        padding: 10px 0
     }
 
-    .mobileUserHand, .mobileComputerHand, .mobile-result-display {
-       margin-top: 0;
-    }
-
-    .mobile-view{
-        display: block;
+    .contest-col {
+        margin-bottom: 14px
     }
 }
 
-@media screen and (min-width: 800px) {
-    .mobileUserHand, .mobileComputerHand, .mobile-result-display {
-        display: none;
-    }
+/* ===== HIDE OLD MOBILE NODES ===== */
+.mobile-view {
+    display: none !important
 }
 
-
-@media screen and (max-width: 512px) {
-    .score-board{
-        width: 400px;
-    }
-
-    .score-board_score {
-        width: 90px;
-        height: 80px;
-    }
-
-    .score-board_title img {
-        width: 120px;
-    }
-
-    .mobile-result h1 {
-        font-size: 30px;
-    }
+/* === RPS: три картинки строго в одну строку на всех брейкпоинтах === */
+.game-hands {
+    width: 100%;
+    overflow-x: hidden;
 }
 
-@media screen and (max-width: 412px) {
-    .score-board{
-        width: 300px;
-    }
-
-    .score-board_score {
-        width: 80px;
-        height: 70px;
-    }
-
-    .score-board_title img {
-        width: 100px;
-    }
-
-    .mobile-result h1 {
-        font-size: 27px;
-    }
-
-    
-.mobile-contest img {
-    width: 120px;
-    height: 120px;
+.hands-table {
+    width: 100%;
+    table-layout: fixed;
+    /* ровно по 1/3 */
+    border-collapse: separate;
+    border-spacing: 0;
+    background-image: url("/images/bg-triangle.svg");
+    background-position: center 38%;
+    background-repeat: no-repeat;
+    background-size: min(440px, 78vw);
 }
 
+/* критично: вернуть табличное отображение, если где-то сделали display:block */
+.hands-table tr {
+    display: table-row !important;
+    height: 14vh;
 }
 
+.hands-table td {
+    display: table-cell !important;
+    width: 33.3333%;
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+    /* центр по вертикали */
+}
+
+/* картинки адаптивно по высоте строки */
+.hands-table td.hand-cell img {
+    height: clamp(84px, 14vh, 170px);
+    width: auto;
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-drag: none;
+    transition: transform .12s ease;
+}
+
+.hands-table td.hand-cell img:active {
+    transform: scale(.96)
+}
+
+/* Чуть повыше на очень узких экранах */
+@media (max-width: 480px) {
+    .hands-table tr {
+        height: 18vh;
+    }
+
+    .hands-table td.hand-cell img {
+        height: clamp(96px, 18vh, 190px);
+    }
+}

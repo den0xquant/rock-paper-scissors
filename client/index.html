@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,73 +7,173 @@
   <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png" />
   <title>Rock, Paper, Scissors</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Минимальные стили для экранов старта/поиска/кулдауна */
+    .screen {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #7c4dff;
+      color: #fff;
+      transition: opacity .2s ease, transform .02s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn[disabled] {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      opacity: .8;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, .2);
+      border-top-color: #7c4dff;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+  </style>
 </head>
 
 <body>
   <div class="wrapper">
-    <div class="score-board">
-      <div class="score-board_title">
-        <img src="images/logo.svg" alt="Rock-paper-Scissors" />
+    <!-- ========== START / COOLDOWN / SEARCHING ========== -->
+    <section id="start-screen" class="screen active">
+      <div class="stack">
+        <h1>Камень • Ножницы • Бумага</h1>
+        <button id="start-btn" class="btn">Начать игру</button>
+        <div id="cooldown" class="muted" style="display:none;">Повторный поиск через <span id="cd-left">03:00</span>
+        </div>
       </div>
-      <div class="score-board_score">
-        <p>Score</p>
-        <h1 id="score">0</h1>
+    </section>
+
+    <section id="search-screen" class="screen">
+      <div class="stack">
+        <div class="spinner" aria-label="Идет поиск соперника"></div>
+        <div>Ищем соперника…</div>
+        <button id="cancel-btn" class="btn" style="background:#ff5171;">Отменить поиск</button>
+        <div class="muted">Оставайтесь на странице — уведомим, как только найдём матч</div>
       </div>
+    </section>
+    <!-- ========== /START / COOLDOWN / SEARCHING ========== -->
+
+    <!-- ===== SCOREBOARD (TABLE) ===== -->
+    <div class="match-board" style="display:none;">
+      <table class="board-table" aria-label="scoreboard">
+        <tr>
+          <td class="board-side">Your score</td>
+          <td>
+            <div id="stars-you" class="stars-line" aria-label="your stars">
+              <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="board-side">Opponent's score</td>
+          <td>
+            <div id="stars-opp" class="stars-line" aria-label="opponent stars">
+              <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div class="game-hands">
-      <div class="rock">
-        <img src="images/Rock.png" alt="rock" onclick="userPick('Rock')" />
-      </div>
-      <div class="paper">
-        <img src="images/Paper.png" alt="paper" onclick="userPick('Paper')" />
-      </div>
-      <div class="scissors">
-        <img src="images/Scissors.png" alt="scissors" onclick="userPick('Scissors')" />
-      </div>
+    <!-- ===== HANDS (TABLE) ===== -->
+    <div class="game-hands" style="display:none;">
+      <table class="hands-table" aria-label="hands">
+        <tr>
+          <td class="hand-cell rock">
+            <img src="images/Rock.png" alt="rock" onclick="userPick('Rock')" />
+          </td>
+          <td class="hand-cell paper">
+            <img src="images/Paper.png" alt="paper" onclick="userPick('Paper')" />
+          </td>
+          <td class="hand-cell scissors">
+            <img src="images/Scissors.png" alt="scissors" onclick="userPick('Scissors')" />
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div class="contest">
-      <div class="userHand">
-        <h2>You picked</h2>
-        <div class="userHand-img hand">
-          <img id="user-pick" src="images/Paper.png" alt="">
-        </div>
-      </div>
-      <div class="result">
-        <h1 id="decision">You win</h1>
-        <button onclick="restartGame()">Play Again</button>
-      </div>
-      <div class="computerHand">
-        <h2>Computer picked</h2>
-        <div class="computerHand-img hand">
-          <img id="computer-pick" src="images/Rock.png" alt="">
-        </div>
-      </div>
+    <!-- ===== CONTEST (TABLE) ===== -->
+    <div class="contest" style="display:none;">
+      <table class="contest-table" aria-label="contest">
+        <tr>
+          <!-- YOU -->
+          <td class="contest-col">
+            <div class="userHand">
+              <h2>You picked</h2>
+              <div class="userHand-img hand">
+                <img id="user-pick" src="images/Paper.png" alt="" style="display:none;">
+              </div>
+            </div>
+          </td>
+
+          <!-- RESULT -->
+          <td class="contest-col center">
+            <div class="result">
+              <h1 id="decision">Make your move</h1>
+              <!-- <button id="ready-btn" class="ready" onclick="sendReady()" style="display:none;">Ready</button> -->
+            </div>
+          </td>
+
+          <!-- OPPONENT -->
+          <td class="contest-col">
+            <div class="oppHand">
+              <h2>Opponent picked</h2>
+              <div class="oppHand-img hand">
+                <div id="opp-loader" class="loader" aria-label="Waiting for opponent..."></div>
+                <div id="opp-ready" class="ready-mark">✓</div>
+                <img id="opp-pick" src="images/Rock.png" alt="" style="display:none;">
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
 
-    <div class="mobile-view">
-      <div class="mobile-contest">
-        <div class="mobileUserHand">
-          <h2>You picked</h2>
-          <div class="mobile-userHand-img hand">
-            <img id="mobile-user-pick" src="images/Paper.png" alt="">
-          </div>
-        </div>
-        <div class="mobileComputerHand">
-          <h2>Computer picked</h2>
-          <div class="mobile-computerHand-img hand">
-            <img id="mobile-computer-pick" src="images/Rock.png" alt="">
-          </div>
-        </div>
-      </div>
-      <div class="mobile-result-display">
-        <div class="mobile-result">
-          <h1 id="mobile-decision">You win</h1>
-          <button onclick="restartGame()">Play Again</button>
-        </div>
-      </div>
-    </div>
+    <!-- MOBILE PLACEHOLDERS (выключены) -->
+    <div class="mobile-view" aria-hidden="true"></div>
   </div>
 
   <script src="script.js"></script>

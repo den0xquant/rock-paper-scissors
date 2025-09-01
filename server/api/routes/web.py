@@ -4,7 +4,6 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 from server.config import settings
-from server.db.collections import users_collection
 
 
 class SessionToken(BaseModel):

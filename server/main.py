@@ -39,5 +39,5 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-app.mount("/", StaticFiles(directory="client", html=True), name="client")
-app.mount("/images", StaticFiles(directory="client/images"), name="images")
+app.mount("/", StaticFiles(directory="client", html=False), name="client")
+app.mount("/images", StaticFiles(directory="client/images", html=False), name="images")
