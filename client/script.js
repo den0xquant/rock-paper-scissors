@@ -2,8 +2,6 @@
 const WS_ROOM_PATH = "/ws/rooms";
 const queryParameters = new URLSearchParams(location.search);
 const t = queryParameters.get("t") || "";
-const TG_ID = queryParameters.get("tg_id") || "";
-let ROOM = queryParameters.get("room") || ""; // ← до матча пусто, сервер назначит
 const IMG = (name) => `images/${name}.png`;
 
 // Сколько держим экран результата, прежде чем разрешать новый раунд

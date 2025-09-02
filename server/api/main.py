@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-from server import api
 from server.api.routes import (
     web, ws
 )

@@ -1,11 +1,14 @@
-from typing import Literal
-from pydantic import BaseModel
+from server.game.models import Move, Outcome
 
 
-class WsEvent(BaseModel):
-    type: Literal["auth", "move", "ready"]
+wins = {
+    Move.PAPER: Move.ROCK,
+    Move.ROCK: Move.SCISSORS,
+    Move.SCISSORS: Move.PAPER,
+}
 
 
-class AuthEvent(WsEvent):
-    username: str
-    user_id: str
+def judge(a: Move, b: Move) -> Outcome:
+    if a == b:
+        return Outcome.DRAW
+    return Outcome.WIN if wins[a] == b else Outcome.LOSE

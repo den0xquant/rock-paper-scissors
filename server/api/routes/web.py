@@ -31,13 +31,8 @@ def jwt_session(t: SessionToken) -> JwtSession:
     try:
         payload = jwt.decode(t.t, settings.SECRET_KEY, algorithms=["HS256"])
     except jwt.PyJWTError:
-        # return JSONResponse(status_code=401, content={"error": "Invalid token"})
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    # Проверить юзера по jwt токену
-    # Создать комнату
-    # 
-    print(payload)
     return JwtSession(
         tg_id=payload.get("tg_id"),
         user_id=payload.get("user_id"),
