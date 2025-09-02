@@ -3,7 +3,6 @@ from fastapi import WebSocket
 
 class ConnectionManager:
     def __init__(self):
-        # room_id -> pid -> WebSocket
         self.rooms: dict[str, dict[str, WebSocket]] = {}
 
     async def connect(self, room_id: str, pid: str, websocket: WebSocket) -> None:

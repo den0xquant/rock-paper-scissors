@@ -1,12 +1,11 @@
 import asyncio
 import json
-import secrets
 from dataclasses import dataclass, field
 
 import redis.asyncio as redis
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
-from server.game.models import RoomCtx, Move, Outcome
+from server.game.models import RoomCtx, Move
 from server.game.states import RoomState
 from server.services.connection_manager import manager
 from server.config import settings
@@ -48,7 +47,7 @@ def _snapshot(rt: RoomRuntime):
                 "pid": p.pid,
                 "state": p.state.name,
                 "score": p.score,
-                "last_move": p.last_move
+                "last_move": p.last_move.value if p.last_move else ""
             }
             for p in ctx.players.values()
         ],
@@ -81,65 +80,59 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
     await manager.connect(room_id=room_id, pid=pid, websocket=websocket)
     rt = _room(room_id)
 
+    get_response_message = lambda type: {"type": type, "data": _snapshot(rt)}
+    get_error_message = lambda e: {"type": "ERROR", "data": {"message": str(e)}}
+    get_round_result_message = lambda type, payload: {"type": type, "data": payload}
+
     try:
         async with rt.lock:
             rt.fsm.on_player_join(rt.ctx, pid)
-            await manager.send_to(room_id=room_id, pid=pid, message={"type": "JOINED", "data": {"pid": pid, "room": _snapshot(rt)}})
+            await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("JOINED"))
 
             if rt.fsm.state in (RoomState.ONE_WAITING,):
-                await manager.broadcast(room_id=room_id, message={"type": "WAITING_OPP", "data": _snapshot(rt)})
+                await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_OPP"))
     
+            if rt.fsm.state in (RoomState.ROUND_AWAIT_MOVES,):
+                await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_MOVE"))
+
     except Exception as e:
-        await manager.send_to(room_id=room_id, pid=pid, message={"type": "ERROR", "data": {"message": str(e)}})
+        await manager.send_to(room_id=room_id, pid=pid, message=get_error_message(e))
 
     try:
         while True:
+            str_data = await websocket.receive_text()
+
+            if rt.fsm.state in (RoomState.MATCH_OVER,):
+                try:
+                    type = int(str_data)
+                except TypeError as e:
+                    await manager.send_to(room_id=room_id, pid=pid, message=get_error_message(e))
+                    continue
+                
+                if type == ClientEvent.READY:
+                    # refresh context state statuses player context etc
+                    rt.fsm.on_player_join(rt.ctx, pid)
+                    await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_OPP"))
+
             try:
-                json_data = await websocket.receive_json()
-                event_type = json_data.get("type", 0)
-                event_data = json_data.get("data", {})
-            except json.JSONDecodeError:
-                await manager.send_to(room_id=room_id, pid=pid, message={"type": "ERROR", "data": {"message": "Incorrect data."}})
+                mv = _parse_move(str_data)
+            except ValueError as e:
+                await manager.send_to(room_id=room_id, pid=pid, message=get_error_message(e))
                 continue
 
-            match event_type:
-                case ClientEvent.START:
-                    # Если состояние комнаты = EMPTY -> добавить игрока в комнату -> Переключить состояние на ONE_WAITING -> broadcast(message WAITING_OPP)
-                    # Если состояние комнаты = ONE_WAITING -> добавить игрока в комнату -> Переключить состояние на ROUND_AWAIT_MOVES -> broadcast(message WAITING_MOVE)
-                    
-                    async with rt.lock:
-                        server_evt = rt.fsm.on_start(rt.ctx)
-                        if server_evt == "WAITING_MOVE":
-                            await manager.broadcast(room_id=room_id, message={"type": "ROUND_START", "data": _snapshot(rt)})
-                
-                case ClientEvent.MOVE:
-                    # Если состояние комнаты ROUND_AWAIT_MOVES -> ждать ход от одного из игроков
-                    # Если походил только 1 игрок то записать ход и отправить ему WAITING_OPP
-                    # Если походили 2 игрока то переключаем состояние комнаты в ROUND_RESULT сохраняем результат и broadcast(message WAITING_MOVE)
-                    try:
-                        mv = _parse_move(event_data.get("move"))
-                    except ValueError as e:
-                        await manager.send_to(room_id=room_id, pid=pid, message={"type": "ERROR", "data": {"message": f"Incorrect move: {str(e)}"}})
-                        continue
+            async with rt.lock:
+                await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("ACK_MOVE"))
+                payload = rt.fsm.on_move(rt.ctx, pid, mv)
 
-                    async with rt.lock:
-                        await manager.send_to(room_id=room_id, pid=pid, message={"type": "ACK_MOVE"})
-                        payload = rt.fsm.on_move(rt.ctx, pid, mv)
+                if payload is None:
+                    await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("WAITING_OPP"))
+                else:
+                    next_evt = rt.fsm.next_round_or_over(rt.ctx)
+                    await manager.broadcast(room_id=room_id, message=get_round_result_message("ROUND_RESULT", payload))
+                    await manager.broadcast(room_id=room_id, message=get_response_message(next_evt.name))
 
-                        if payload is None:
-                            await manager.send_to(room_id=room_id, pid=pid, message={"type": "WAITING_OPP"})
-                        else:
-                            await manager.broadcast(room_id=room_id, message={"type": "ROUND_RESULT", "data": payload})
-                            next_evt = rt.fsm.next_round_or_over(rt.ctx)
-                            await manager.broadcast(room_id=room_id, message={"type": next_evt, "data": _snapshot(rt)})
-
-
-
-    
-                case _:
-                    await websocket.send_text('{"type": "ERROR", "data": {"message": "Bad event type"}}')
-    
     except WebSocketDisconnect:
         pass
+
     finally:
         pass

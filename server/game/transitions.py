@@ -1,6 +1,6 @@
 from typing import Callable
 from server.game.states import RoomState, PlayerState
-from server.game.events import ClientEvent
+from server.game.events import ClientEvent, ServerEvent
 from server.game.models import Move, Outcome, PlayerCtx, RoomCtx
 from server.game.rules import judge
 
@@ -10,20 +10,7 @@ class FSM:
         self.state: RoomState = initial
         self._table: dict[tuple[RoomState, ClientEvent], Callable[..., RoomState]] = {}
 
-    def on(self, state: RoomState, event: ClientEvent):
-        def decorator(fn: Callable[..., RoomState]):
-            self._table[(state, event)] = fn
-            return fn
-        return decorator
-
-    def send(self, event: ClientEvent, **kwargs):
-        handler = self._table.get((self.state, event))
-        if not handler:
-            print(f"[debug] Нет перехода {self.state} -> {event}?")
-            return
-        self.state = handler(self, **kwargs)
-
-    def on_player_join(self, ctx: RoomCtx, pid: str) -> str:
+    def on_player_join(self, ctx: RoomCtx, pid: str) -> ServerEvent:
         if pid not in ctx.players:
             ctx.players[pid] = PlayerCtx(pid=pid, state=PlayerState.CONNECTED)
 
@@ -38,26 +25,18 @@ class FSM:
                 p.last_move = None
                 p.state = PlayerState.READY
             self.state = RoomState.ROUND_AWAIT_MOVES
-        return "WAITING_MOVE"
+        return ServerEvent.WAITING_MOVE
 
-    def on_start(self, ctx: RoomCtx) -> str:
-        """
-        Возврат server-side события для удобства бродкаста:
-        'WAITING_OPP' | 'WAITING_MOVE'
-        """
-        if self.state == RoomState.EMPTY:
-            # не сработает, т.к. без игроков; для надёжности
-            return "WAITING_OPP"
-        if self.state == RoomState.ONE_WAITING:
-            # второй игрок ещё не зашёл — просто ждём оппа
-            return "WAITING_OPP"
+    def on_start(self, ctx: RoomCtx) -> ServerEvent:
+        if self.state in (RoomState.EMPTY, RoomState.ONE_WAITING,):
+            return ServerEvent.WAITING_OPP
         # если 2 игрока в комнате — идём в ожидание ходов (новый раунд)
         ctx.round_id += 1
         for p in ctx.players.values():
             p.last_move = None
             p.state = PlayerState.READY
         self.state = RoomState.ROUND_AWAIT_MOVES
-        return "WAITING_MOVE"
+        return ServerEvent.WAITING_MOVE
 
     def on_move(self, ctx: RoomCtx, pid: str, move: Move) -> dict | None:
         """
@@ -83,7 +62,6 @@ class FSM:
             return None
 
         # оба ход есть — считаем
-        from server.game.models import Outcome
         out = judge(a.last_move, b.last_move)
         winner_pid: str | None = None
         if out == Outcome.WIN:
@@ -97,12 +75,9 @@ class FSM:
             "round_id": ctx.round_id,
             "p1": {"pid": a.pid, "move": a.last_move.value},
             "p2": {"pid": b.pid, "move": b.last_move.value},
-            "outcome": "draw" if winner_pid is None else "win",
             "winner": winner_pid,
             "score": {a.pid: a.score, b.pid: b.score},
         }
-
-        # переходим в ROUND_RESULT на миг
         self.state = RoomState.ROUND_RESULT
         return payload
 
@@ -113,7 +88,7 @@ class FSM:
                 return p.pid
         return
 
-    def next_round_or_over(self, ctx: RoomCtx) -> str:
+    def next_round_or_over(self, ctx: RoomCtx) -> ServerEvent:
         """
         Возвращает тип сообщения для фронта:
           'MATCH_OVER' или 'WAITING_MOVE' (для следующего раунда)
@@ -121,14 +96,14 @@ class FSM:
         winner = self.has_match_winner(ctx)
         if winner:
             self.state = RoomState.MATCH_OVER
-            return "MATCH_OVER"
-        # иначе продолжаем матч
+            return ServerEvent.MATCH_OVER
+
         ctx.round_id += 1
         for p in ctx.players.values():
             p.last_move = None
             p.state = PlayerState.READY
         self.state = RoomState.ROUND_AWAIT_MOVES
-        return "WAITING_MOVE"
+        return ServerEvent.WAITING_MOVE
 
     def on_leave(self, ctx: RoomCtx, pid: str) -> None:
         ctx.players.pop(pid, None)
@@ -142,27 +117,20 @@ class FSM:
             solo.state = PlayerState.CONNECTED
             self.state = RoomState.ONE_WAITING
 
+    def on_restart(self, ctx: RoomCtx, pid: str) -> ServerEvent:
+        if pid not in ctx.players:
+            ctx.players[pid] = PlayerCtx(pid=pid, state=PlayerState.CONNECTED)
 
-def build_transitions() -> FSM:
-    fsm = FSM(RoomState.EMPTY)
-
-    @fsm.on(state=RoomState.EMPTY, event=ClientEvent.START)
-    def one_player_connected(self: FSM, **kwargs):
-        return RoomState.ONE_WAITING
-    
-    @fsm.on(state=RoomState.ONE_WAITING, event=ClientEvent.START)
-    def start_game(self: FSM, **kwargs):
-        return RoomState.ROUND_AWAIT_MOVES
-
-    @fsm.on(state=RoomState.ROUND_AWAIT_MOVES, event=ClientEvent.MOVE)
-    def move(self: FSM, move: Move, **kwargs):
-        return RoomState.ROUND_RESULT
-    
-    @fsm.on(state=RoomState.ROUND_RESULT, event=ClientEvent.START)
-    def start_again(self: FSM, **kwargs):
-        return RoomState.ONE_WAITING
-
-    return fsm
-
-
-fsm = build_transitions()
+        n = len(ctx.players)
+        if n == 0:
+            self.state = RoomState.EMPTY
+        elif n == 1:
+            self.state = RoomState.ONE_WAITING
+        else:
+            ctx.round_id += 1
+            for p in ctx.players.values():
+                p.last_move = None
+                p.state = PlayerState.READY
+            self.state = RoomState.ROUND_AWAIT_MOVES
+        
+        return ServerEvent.WAITING_MOVE

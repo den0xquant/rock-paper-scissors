@@ -4,6 +4,7 @@ from enum import Enum, auto
 class ClientEvent(int, Enum):
     START = 1
     MOVE = 2
+    READY = 3
 
 
 class ServerEvent(int, Enum):
@@ -13,3 +14,4 @@ class ServerEvent(int, Enum):
     WAITING_MOVE = auto()
     READY = auto()
     RESULT = auto()
+    MATCH_OVER = auto()
