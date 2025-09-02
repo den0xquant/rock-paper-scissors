@@ -29,6 +29,5 @@ class RoomCtx:
     name: str
     best_of: int = 5
     round_id: int = 0
-    state: RoomState = RoomState.EMPTY
     players: dict[str, PlayerCtx] = field(default_factory=dict)
     last_result: str | None = None

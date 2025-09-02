@@ -15,3 +15,4 @@ class ServerEvent(int, Enum):
     READY = auto()
     RESULT = auto()
     MATCH_OVER = auto()
+    JOINED = auto()

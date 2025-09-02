@@ -96,6 +96,9 @@ class FSM:
         winner = self.has_match_winner(ctx)
         if winner:
             self.state = RoomState.MATCH_OVER
+            ctx.last_result = None
+            ctx.round_id = 0
+            ctx.players.clear()
             return ServerEvent.MATCH_OVER
 
         ctx.round_id += 1
@@ -119,18 +122,14 @@ class FSM:
 
     def on_restart(self, ctx: RoomCtx, pid: str) -> ServerEvent:
         if pid not in ctx.players:
-            ctx.players[pid] = PlayerCtx(pid=pid, state=PlayerState.CONNECTED)
+            ctx.players[pid] = PlayerCtx(pid=pid, state=PlayerState.READY)
 
         n = len(ctx.players)
-        if n == 0:
-            self.state = RoomState.EMPTY
-        elif n == 1:
-            self.state = RoomState.ONE_WAITING
-        else:
+        if n == 2:
             ctx.round_id += 1
             for p in ctx.players.values():
                 p.last_move = None
                 p.state = PlayerState.READY
             self.state = RoomState.ROUND_AWAIT_MOVES
-        
-        return ServerEvent.WAITING_MOVE
+            return ServerEvent.WAITING_MOVE
+        return ServerEvent.WAITING_OPP

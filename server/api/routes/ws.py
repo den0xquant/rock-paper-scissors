@@ -9,7 +9,7 @@ from server.game.models import RoomCtx, Move
 from server.game.states import RoomState
 from server.services.connection_manager import manager
 from server.config import settings
-from server.game.events import ClientEvent
+from server.game.events import ClientEvent, ServerEvent
 from server.game.transitions import FSM
 
 
@@ -37,6 +37,9 @@ def _room(rt_or_id: str | RoomRuntime) -> RoomRuntime:
 
 def _snapshot(rt: RoomRuntime):
     ctx = rt.ctx
+    print(rt.fsm.state.name)
+    print(rt)
+    print(ctx)
     return {
         "state": rt.fsm.state.name,
         "best_of": ctx.best_of,
@@ -83,17 +86,18 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
     get_response_message = lambda type: {"type": type, "data": _snapshot(rt)}
     get_error_message = lambda e: {"type": "ERROR", "data": {"message": str(e)}}
     get_round_result_message = lambda type, payload: {"type": type, "data": payload}
+    get_match_over_message = lambda : {"type": "ERROR", "data": {"message": "If you are ready send '3'"}}
 
     try:
         async with rt.lock:
             rt.fsm.on_player_join(rt.ctx, pid)
-            await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("JOINED"))
+            await manager.send_to(room_id=room_id, pid=pid, message=get_response_message(ServerEvent.JOINED.name))
 
             if rt.fsm.state in (RoomState.ONE_WAITING,):
-                await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_OPP"))
+                await manager.broadcast(room_id=room_id, message=get_response_message(ServerEvent.WAITING_OPP.name))
     
             if rt.fsm.state in (RoomState.ROUND_AWAIT_MOVES,):
-                await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_MOVE"))
+                await manager.broadcast(room_id=room_id, message=get_response_message(ServerEvent.WAITING_MOVE.name))
 
     except Exception as e:
         await manager.send_to(room_id=room_id, pid=pid, message=get_error_message(e))
@@ -102,17 +106,21 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
         while True:
             str_data = await websocket.receive_text()
 
-            if rt.fsm.state in (RoomState.MATCH_OVER,):
-                try:
-                    type = int(str_data)
-                except TypeError as e:
-                    await manager.send_to(room_id=room_id, pid=pid, message=get_error_message(e))
-                    continue
-                
-                if type == ClientEvent.READY:
-                    # refresh context state statuses player context etc
-                    rt.fsm.on_player_join(rt.ctx, pid)
-                    await manager.broadcast(room_id=room_id, message=get_response_message("WAITING_OPP"))
+            if rt.fsm.state is RoomState.MATCH_OVER:
+                async with rt.lock:
+                    try:
+                        type = int(str_data)
+                    except (TypeError, ValueError) as e:
+                        await manager.send_to(room_id=room_id, pid=pid, message=get_match_over_message())
+                        continue
+                    
+                    if type == ClientEvent.READY.value:
+                        next_evt = rt.fsm.on_restart(rt.ctx, pid)
+                        if rt.fsm.state is RoomState.ROUND_AWAIT_MOVES:
+                            await manager.broadcast(room_id=room_id, message=get_response_message(next_evt.name))
+                        else:
+                            await manager.send_to(room_id=room_id, pid=pid, message=get_response_message(next_evt.name))
+                        continue
 
             try:
                 mv = _parse_move(str_data)
@@ -121,18 +129,20 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
                 continue
 
             async with rt.lock:
-                await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("ACK_MOVE"))
+                await manager.send_to(room_id=room_id, pid=pid, message=get_response_message(ServerEvent.ACK.name))
                 payload = rt.fsm.on_move(rt.ctx, pid, mv)
 
                 if payload is None:
-                    await manager.send_to(room_id=room_id, pid=pid, message=get_response_message("WAITING_OPP"))
+                    await manager.send_to(room_id=room_id, pid=pid, message=get_response_message(ServerEvent.WAITING_OPP.name))
                 else:
                     next_evt = rt.fsm.next_round_or_over(rt.ctx)
-                    await manager.broadcast(room_id=room_id, message=get_round_result_message("ROUND_RESULT", payload))
+                    await manager.broadcast(room_id=room_id, message=get_round_result_message(ServerEvent.RESULT.name, payload))
                     await manager.broadcast(room_id=room_id, message=get_response_message(next_evt.name))
 
     except WebSocketDisconnect:
-        pass
+        rt.fsm.on_leave(rt.ctx, pid)
+        await manager.disconnect(room_id=room_id, pid=pid)
+        await manager.broadcast(room_id=room_id, message=get_response_message(ServerEvent.WAITING_OPP.name))
 
     finally:
         pass
