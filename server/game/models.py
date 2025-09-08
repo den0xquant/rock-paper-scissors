@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass, field
 
-from server.game.states import RoomState, PlayerState
+from server.game.states import PlayerState
 
 
 class Move(Enum):
