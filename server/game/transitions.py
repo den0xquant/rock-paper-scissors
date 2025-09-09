@@ -20,7 +20,6 @@ class FSM:
         elif n == 1:
             self.state = RoomState.ONE_WAITING
         else:
-            ctx.round_id += 1
             for p in ctx.players.values():
                 p.last_move = None
                 p.state = PlayerState.READY
@@ -30,8 +29,7 @@ class FSM:
     def on_start(self, ctx: RoomCtx) -> ServerEvent:
         if self.state in (RoomState.EMPTY, RoomState.ONE_WAITING,):
             return ServerEvent.WAITING_OPP
-        # если 2 игрока в комнате — идём в ожидание ходов (новый раунд)
-        ctx.round_id += 1
+        ctx.round_id = 0
         for p in ctx.players.values():
             p.last_move = None
             p.state = PlayerState.READY
@@ -39,21 +37,14 @@ class FSM:
         return ServerEvent.WAITING_MOVE
 
     def on_move(self, ctx: RoomCtx, pid: str, move: Move) -> dict | None:
-        """
-        Возврат:
-          None — ещё ждём второй ход (первый сделал)
-          dict (ROUND_RESULT payload) — оба сходили, можно бродкастить результат
-        """
         if self.state != RoomState.ROUND_AWAIT_MOVES:
             return None
         p = ctx.players[pid]
         if p.last_move is not None:
-            # идемпотентность — игнор
             return None
         p.last_move = move
         p.state = PlayerState.MOVED
 
-        # соберём два хода
         players = list(ctx.players.values())
         if len(players) != 2:
             return None
@@ -61,7 +52,6 @@ class FSM:
         if a.last_move is None or b.last_move is None:
             return None
 
-        # оба ход есть — считаем
         out = judge(a.last_move, b.last_move)
         winner_pid: str | None = None
         if out == Outcome.WIN:
@@ -89,17 +79,13 @@ class FSM:
         return
 
     def next_round_or_over(self, ctx: RoomCtx) -> ServerEvent:
-        """
-        Возвращает тип сообщения для фронта:
-          'MATCH_OVER' или 'WAITING_MOVE' (для следующего раунда)
-        """
-        winner = self.has_match_winner(ctx)
-        if winner:
-            self.state = RoomState.MATCH_OVER
-            ctx.last_result = None
-            ctx.round_id = 0
-            ctx.players.clear()
-            return ServerEvent.MATCH_OVER
+        # winner = self.has_match_winner(ctx)
+        # if winner:
+        #     self.state = RoomState.MATCH_OVER
+        #     ctx.last_result = None
+        #     ctx.round_id = 0
+        #     ctx.players.clear()
+        #     return ServerEvent.MATCH_OVER
 
         ctx.round_id += 1
         for p in ctx.players.values():
@@ -114,10 +100,11 @@ class FSM:
         if n == 0:
             self.state = RoomState.EMPTY
             ctx.round_id = 0
-        else:
-            # остался один — ждём оппонента
+        elif n == 1:
             solo = next(iter(ctx.players.values()))
-            solo.state = PlayerState.CONNECTED
+            solo.state = PlayerState.READY
+            solo.score = 0
+            ctx.round_id = 0
             self.state = RoomState.ONE_WAITING
 
     def on_restart(self, ctx: RoomCtx, pid: str) -> ServerEvent:

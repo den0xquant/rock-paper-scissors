@@ -50,6 +50,7 @@ def _idem_key(event: str, room_id: str, pid: str, rt, payload: Any | None) -> st
 
 async def _idem_seen(event: str, room_id: str, pid: str, rt, payload: Any | None, ttl_sec: int = 10) -> bool:
     key = _idem_key(event, room_id, pid, rt, payload)
+    print(key)
     created = await rds.set(key, "1", ex=ttl_sec, nx=True)
     return not bool(created)
 
@@ -81,20 +82,20 @@ def _snapshot(rt: RoomRuntime):
                 "pid": p.pid,
                 "state": p.state.name,
                 "score": p.score,
-                "last_move": p.last_move if p.last_move else ""
+                "last_move": p.last_move.value if p.last_move else ""
             }
             for p in ctx.players.values()
         ],
     }
 
 
-def _parse_move(v: str) -> str:
+def _parse_move(v: str) -> Move:
     if v in ("r", "rock"):
-        return Move.ROCK.name
+        return Move.ROCK
     if v in ("p", "paper"):
-        return Move.PAPER.name
+        return Move.PAPER
     if v in ("s", "scissors"):
-        return Move.SCISSORS.name
+        return Move.SCISSORS
     raise ValueError("move must be r/p/s")
 
 
@@ -205,9 +206,9 @@ async def _on_ready(rt, room_id, pid):
         await _reply_to(room_id, pid, _evt(rt, ServerEvent.ACK, new_cid()))
 
 
-async def _on_move(rt, room_id, pid, move):
+async def _on_move(rt, room_id, pid, move: Move):
     event = "MOVE"
-    if await _idem_seen(event, room_id, pid, rt, payload={"move": move}, ttl_sec=10):
+    if await _idem_seen(event, room_id, pid, rt, payload={"move": move.value}, ttl_sec=10):
         await _reply_to(room_id, pid, _evt(rt, ServerEvent.ACK, new_cid()))
         await _push_room_hints(rt, room_id)
         return
@@ -219,7 +220,7 @@ async def _on_move(rt, room_id, pid, move):
         if result_payload is None:
             await _reply_to(room_id, pid, _evt(rt, ServerEvent.WAITING_OPP, new_cid()))
             return
-        next_evt = rt.fsm.next_round_or_over(rt.cxt)
+        next_evt = rt.fsm.next_round_or_over(rt.ctx)
     
     await _broadcast(room_id, _payload(ServerEvent.RESULT, result_payload, new_cid()))
     await _broadcast(room_id, _evt(rt, next_evt, new_cid()))
@@ -233,7 +234,6 @@ async def _on_disconnect(rt, room_id: str, pid: str):
 
 
 ws_router = APIRouter(tags=["websocket"])
-redis_client = redis.Redis.from_url(settings.REDIS_URI, decode_responses=True)
 
 
 @ws_router.websocket("/ws/rooms/{room_id}")
@@ -272,7 +272,7 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
                 msg = _parse_client_raw(raw_data)
             except (ValueError, ValidationError) as e:
                 if rt.fsm.state is RoomState.MATCH_OVER:
-                    await _reply_to(room_id, pid, _err("If you are ready send '3'", new_cid()))
+                    await _reply_to(room_id, pid, _err("If you are ready send 'ready'", new_cid()))
                 else:
                     await _reply_to(room_id, pid, _err(str(e), new_cid()))
                 continue
@@ -283,7 +283,6 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
                         await _on_ready(rt, room_id, pid)
                     elif msg.type == "MOVE":
                         mv = (msg.data or {}).get("move")
-                        print('MOVE', mv)
                         if not mv:
                             raise ValueError("MOVE requires 'data.move'")
                         await _on_move(rt, room_id, pid, mv)
@@ -293,7 +292,7 @@ async def websocket_rps_endpoint(websocket: WebSocket, room_id: str):
                         await _reply_to(room_id, pid, _err(f"Unsupported type: {msg.type}", new_cid()))
                 
                 except Exception as e:
-                    await _reply_to(room_id, pid, _err(str(e), new_cid()))
+                    await _reply_to(room_id, pid, _err("Cannot process message: " + str(e), new_cid()))
 
     except WebSocketDisconnect:
         try:
