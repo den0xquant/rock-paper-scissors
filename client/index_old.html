@@ -1,182 +1,564 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png" />
-  <title>Rock, Paper, Scissors</title>
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    /* Минимальные стили для экранов старта/поиска/кулдауна */
-    .screen {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      min-height: 60vh;
-      text-align: center;
-    }
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RPS</title>
+    <style>
+        :root {
+            --bg1: #0e0f1a;
+            --bg2: #1a1c2e;
+            --glass: #ffffff14;
+            --border: #ffffff22;
+            --text: #f6f7fb;
+            --muted: #a3a9bf;
+            --accent: #7c4dff;
+            --accent2: #00e5ff;
+            --win: #27e98c;
+            --lose: #ff5171;
+            --draw: #ffd166;
+            --radius: 16px;
+        }
 
-    .screen.active {
-      display: flex;
-    }
+        * {
+            box-sizing: border-box
+        }
 
-    .btn {
-      appearance: none;
-      border: 0;
-      border-radius: 12px;
-      padding: 14px 18px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      background: #7c4dff;
-      color: #fff;
-      transition: opacity .2s ease, transform .02s ease;
-    }
+        html,
+        body {
+            height: 100%
+        }
 
-    .btn:active {
-      transform: translateY(1px);
-    }
+        body {
+            margin: 0;
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Inter, Roboto, Arial;
+            background:
+                radial-gradient(900px 600px at 10% 10%, #1e2242 0%, transparent 60%),
+                radial-gradient(900px 600px at 90% 15%, #182041 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg1), var(--bg2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
 
-    .btn[disabled] {
-      opacity: .5;
-      cursor: not-allowed;
-    }
+        .app {
+            width: min(900px, 100%);
+            display: grid;
+            gap: 12px
+        }
 
-    .muted {
-      opacity: .8;
-      font-size: 14px;
-      margin-top: 8px;
-    }
+        .top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: grid;
+            gap: 8px;
+        }
 
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 4px solid rgba(255, 255, 255, .2);
-      border-top-color: #7c4dff;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
+        .banner {
+            display: none;
+            place-items: center;
+            text-align: center;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            font-weight: 800;
+            letter-spacing: .3px;
+            font-size: clamp(16px, 3.5vw, 22px);
+        }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+        .banner.win {
+            color: var(--bg1);
+            background: linear-gradient(145deg, var(--win), #8dffcf)
+        }
 
-    .stack {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: center;
-    }
-  </style>
+        .banner.lose {
+            color: #2a0310;
+            background: linear-gradient(145deg, var(--lose), #ff96a9)
+        }
+
+        .banner.draw {
+            color: #3a2d00;
+            background: linear-gradient(145deg, var(--draw), #ffe79b)
+        }
+
+        .hdr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: clamp(14px, 2.6vw, 16px);
+        }
+
+        .pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--glass);
+            color: var(--muted)
+        }
+
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        .arena {
+            display: grid;
+            gap: 14px
+        }
+
+        .round {
+            text-align: center;
+            font-weight: 900;
+            letter-spacing: .6px;
+            font-size: clamp(20px, 5.5vw, 34px)
+        }
+
+        .status {
+            text-align: center;
+            color: var(--muted);
+            font-size: clamp(13px, 2.8vw, 16px)
+        }
+
+        .grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 760px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .score {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+        }
+
+        .who {
+            font-weight: 700
+        }
+
+        .stars {
+            display: flex;
+            gap: 6px;
+            font-size: clamp(18px, 5vw, 24px)
+        }
+
+        .star {
+            opacity: .28
+        }
+
+        .star.on {
+            opacity: 1
+        }
+
+        .pane {
+            display: grid;
+            gap: 10px;
+            justify-items: center;
+            text-align: center;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .bigicon {
+            font-size: clamp(40px, 14vw, 80px)
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: clamp(12px, 2.8vw, 14px)
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px solid #ffffff25;
+            border-top-color: var(--accent2);
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .moves {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            border: none;
+            border-radius: 16px;
+            padding: 14px 16px;
+            background: #ffffff14;
+            color: var(--text);
+            font-size: clamp(16px, 4.5vw, 18px);
+            min-width: 120px;
+            cursor: pointer;
+            transition: transform .06s ease, filter .2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px)
+        }
+
+        .btn:active {
+            transform: translateY(0)
+        }
+
+        .btn[disabled] {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .btn.primary {
+            background: linear-gradient(145deg, var(--accent), var(--accent2))
+        }
+
+        .duel {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: center
+        }
+
+        .duel .h {
+            display: grid;
+            gap: 6px;
+            justify-items: center;
+            min-width: 120px
+        }
+
+        .duel .who {
+            color: var(--muted);
+            font-weight: 600
+        }
+
+        .foot {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 12px
+        }
+    </style>
 </head>
 
 <body>
-  <div class="wrapper">
-    <!-- ========== START / COOLDOWN / SEARCHING ========== -->
-    <section id="start-screen" class="screen active">
-      <div class="stack">
-        <h1>Камень • Ножницы • Бумага</h1>
-        <button id="start-btn" class="btn">Начать игру</button>
-        <div id="cooldown" class="muted" style="display:none;">Повторный поиск через <span id="cd-left">03:00</span>
+    <div class="app">
+        <div class="top">
+            <div id="resultBanner" class="banner">—</div>
+            <div class="hdr">
+                <div class="pill" id="roomPill">room: —</div>
+                <div class="pill" id="pidPill">you: —</div>
+                <div class="pill" id="statePill">state: —</div>
+                <div class="pill">first to <span id="winsNeeded">3</span></div>
+            </div>
         </div>
-      </div>
-    </section>
 
-    <section id="search-screen" class="screen">
-      <div class="stack">
-        <div class="spinner" aria-label="Идет поиск соперника"></div>
-        <div>Ищем соперника…</div>
-        <button id="cancel-btn" class="btn" style="background:#ff5171;">Отменить поиск</button>
-        <div class="muted">Оставайтесь на странице — уведомим, как только найдём матч</div>
-      </div>
-    </section>
-    <!-- ========== /START / COOLDOWN / SEARCHING ========== -->
+        <div class="card arena">
+            <div class="round">ROUND <span id="roundNo">0</span></div>
+            <div class="status" id="status">Connecting…</div>
 
-    <!-- ===== SCOREBOARD (TABLE) ===== -->
-    <div class="match-board" style="display:none;">
-      <table class="board-table" aria-label="scoreboard">
-        <tr>
-          <td class="board-side">Your score</td>
-          <td>
-            <div id="stars-you" class="stars-line" aria-label="your stars">
-              <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+            <div class="grid">
+                <div class="pane">
+                    <div class="who">YOUR SCORE</div>
+                    <div class="stars" id="youStars"></div>
+                    <div class="bigicon" id="youIcon">—</div>
+                    <div class="hint" id="youHint">Take your pick</div>
+                </div>
+                <div class="pane">
+                    <div class="who">OPPONENT'S SCORE</div>
+                    <div class="stars" id="oppStars"></div>
+                    <div id="oppIconWrap" class="bigicon">
+                        <div class="spinner" id="oppSpin"></div>
+                        <div id="oppIcon" style="display:none">—</div>
+                    </div>
+                    <div class="hint" id="oppHint">Waiting for the opponent</div>
+                </div>
             </div>
-          </td>
-        </tr>
-        <tr>
-          <td class="board-side">Opponent's score</td>
-          <td>
-            <div id="stars-opp" class="stars-line" aria-label="opponent stars">
-              <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+
+            <div class="moves" id="moves" style="display:none">
+                <button class="btn" data-move="r">✊ Rock</button>
+                <button class="btn" data-move="p">✋ Paper</button>
+                <button class="btn" data-move="s">✌️ Scissors</button>
             </div>
-          </td>
-        </tr>
-      </table>
+
+            <div class="duel" id="duel" style="display:none">
+                <div class="h">
+                    <div class="bigicon" id="duelYou">—</div>
+                    <div class="who">YOU</div>
+                </div>
+                <div style="opacity:.6">vs</div>
+                <div class="h">
+                    <div class="bigicon" id="duelOpp">—</div>
+                    <div class="who">OPPONENT</div>
+                </div>
+            </div>
+
+            <div style="display:grid; justify-items:center">
+                <button id="rematch" class="btn primary" style="display:none">Rematch</button>
+            </div>
+        </div>
+
+        <div class="foot">
+            <div>Share this room link to a friend (set different pid)</div>
+        </div>
     </div>
 
-    <!-- ===== HANDS (TABLE) ===== -->
-    <div class="game-hands" style="display:none;">
-      <table class="hands-table" aria-label="hands">
-        <tr>
-          <td class="hand-cell rock">
-            <img src="images/Rock.png" alt="rock" onclick="userPick('Rock')" />
-          </td>
-          <td class="hand-cell paper">
-            <img src="images/Paper.png" alt="paper" onclick="userPick('Paper')" />
-          </td>
-          <td class="hand-cell scissors">
-            <img src="images/Scissors.png" alt="scissors" onclick="userPick('Scissors')" />
-          </td>
-        </tr>
-      </table>
-    </div>
+    <script>
+        // ====== Config
+        const RESULT_GRACE_MS = 2000; // сколько показывать баннер результата до следующего state
+        const ICON = { rock: '✊', paper: '✋', scissors: '✌️' };
+        const MOVES = { r: 'rock', p: 'paper', s: 'scissors' };
 
-    <!-- ===== CONTEST (TABLE) ===== -->
-    <div class="contest" style="display:none;">
-      <table class="contest-table" aria-label="contest">
-        <tr>
-          <!-- YOU -->
-          <td class="contest-col">
-            <div class="userHand">
-              <h2>You picked</h2>
-              <div class="userHand-img hand">
-                <img id="user-pick" src="images/Paper.png" alt="" style="display:none;">
-              </div>
-            </div>
-          </td>
+        // ====== DOM
+        const el = {
+            banner: document.getElementById('resultBanner'),
+            room: document.getElementById('roomPill'),
+            pid: document.getElementById('pidPill'),
+            state: document.getElementById('statePill'),
+            wins: document.getElementById('winsNeeded'),
+            roundNo: document.getElementById('roundNo'),
+            status: document.getElementById('status'),
+            youStars: document.getElementById('youStars'),
+            oppStars: document.getElementById('oppStars'),
+            youIcon: document.getElementById('youIcon'),
+            youHint: document.getElementById('youHint'),
+            oppSpin: document.getElementById('oppSpin'),
+            oppIcon: document.getElementById('oppIcon'),
+            oppHint: document.getElementById('oppHint'),
+            moves: document.getElementById('moves'),
+            duel: document.getElementById('duel'),
+            duelYou: document.getElementById('duelYou'),
+            duelOpp: document.getElementById('duelOpp'),
+            rematch: document.getElementById('rematch'),
+        };
 
-          <!-- RESULT -->
-          <td class="contest-col center">
-            <div class="result">
-              <h1 id="decision">Make your move</h1>
-              <!-- <button id="ready-btn" class="ready" onclick="sendReady()" style="display:none;">Ready</button> -->
-            </div>
-          </td>
+        // ====== URL / Identity
+        const params = new URLSearchParams(location.search);
+        const ROOM = params.get('room') || 'demo';
+        let PID = params.get('pid') || localStorage.getItem('rps_pid') || ('u' + Math.random().toString(16).slice(2, 8));
+        localStorage.setItem('rps_pid', PID);
+        el.room.textContent = `room: ${ROOM}`;
+        el.pid.textContent = `you: ${PID}`;
 
-          <!-- OPPONENT -->
-          <td class="contest-col">
-            <div class="oppHand">
-              <h2>Opponent picked</h2>
-              <div class="oppHand-img hand">
-                <div id="opp-loader" class="loader" aria-label="Waiting for opponent..."></div>
-                <div id="opp-ready" class="ready-mark">✓</div>
-                <img id="opp-pick" src="images/Rock.png" alt="" style="display:none;">
-              </div>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </div>
+        // ====== State
+        const state = {
+            ws: null,
+            canMove: false,
+            winsNeeded: 3,
+            lastResult: null,
+            resultLockUntil: 0,
+            deferred: null, // отложенный WAITING_MOVE / MATCH_OVER
+            snapshot: null,
+        };
 
-    <!-- MOBILE PLACEHOLDERS (выключены) -->
-    <div class="mobile-view" aria-hidden="true"></div>
-  </div>
+        // ====== Helpers
+        const now = () => Date.now();
+        function wsURL() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            return `${proto}://${location.host}/ws/rooms/${encodeURIComponent(ROOM)}?pid=${encodeURIComponent(PID)}`;
+        }
+        function setBanner(kind, text) {
+            el.banner.className = 'banner ' + (kind || '');
+            el.banner.textContent = text || '';
+            el.banner.style.display = text ? 'grid' : 'none';
+        }
+        function setMoves(on) {
+            el.moves.style.display = on ? 'flex' : 'none';
+            document.querySelectorAll('[data-move]').forEach(b => b.disabled = !on);
+        }
+        function setOppSpinner(on) {
+            el.oppSpin.style.display = on ? 'block' : 'none';
+            el.oppIcon.style.display = on ? 'none' : 'block';
+        }
+        function stars(container, have, need) {
+            container.innerHTML = '';
+            for (let i = 0; i < need; i++) {
+                const span = document.createElement('span');
+                span.className = 'star' + (i < have ? ' on' : '');
+                span.textContent = '★';
+                container.appendChild(span);
+            }
+        }
+        function updateFromSnapshot(s) {
+            state.snapshot = s;
+            el.state.textContent = `state: ${s.state}`;
+            el.wins.textContent = s.wins_needed ?? state.winsNeeded;
+            state.winsNeeded = s.wins_needed ?? state.winsNeeded;
+            el.roundNo.textContent = String(s.round_id ?? 0);
 
-  <script src="script.js"></script>
+            // map players
+            const me = s.players.find(p => p.pid === PID) || { score: 0, last_move: '' };
+            const opp = s.players.find(p => p.pid !== PID) || { score: 0, last_move: '' };
+
+            stars(el.youStars, me.score ?? 0, state.winsNeeded);
+            stars(el.oppStars, opp.score ?? 0, state.winsNeeded);
+
+            el.youIcon.textContent = me.last_move ? ICON[me.last_move] : '—';
+            if (opp.last_move) {
+                setOppSpinner(false);
+                el.oppIcon.textContent = ICON[opp.last_move];
+            } else {
+                setOppSpinner(true);
+                el.oppIcon.textContent = '—';
+            }
+        }
+
+        // ====== Renderers
+        function onJoined() { el.status.textContent = 'Waiting for opponent…'; setMoves(false); setBanner('', ''); el.duel.style.display = 'none'; }
+        function onWaitingOpp() { el.status.textContent = 'Waiting for opponent…'; setMoves(false); setBanner('', ''); el.duel.style.display = 'none'; }
+        function onWaitingMove() {
+            if (now() < state.resultLockUntil) { state.deferred = { type: 'WAITING_MOVE' }; return; }
+            el.status.textContent = 'Make your pick'; setMoves(true); setBanner('', ''); el.duel.style.display = 'none';
+            setOppSpinner(true);
+            el.youHint.textContent = 'Take your pick';
+            el.oppHint.textContent = 'Waiting for the opponent';
+            el.youIcon.textContent = '—';
+        }
+        function onAck() {
+            el.status.textContent = 'Move accepted, waiting for opponent…';
+            setMoves(false);
+            setOppSpinner(true);
+            el.oppHint.textContent = 'Opponent is thinking…';
+        }
+        function onResult(payload) {
+            state.lastResult = payload;
+            setOppSpinner(false);
+
+            // показать дуэль
+            const myMove = (payload.p1.pid === PID ? payload.p1.move : payload.p2.pid === PID ? payload.p2.move : '');
+            const oppMove = (payload.p1.pid !== PID ? payload.p1.move : payload.p2.move);
+            el.youIcon.textContent = ICON[myMove];
+            el.oppIcon.textContent = ICON[oppMove];
+            el.duelYou.textContent = myMove ? ICON[myMove] : '—';
+            el.duelOpp.textContent = oppMove ? ICON[oppMove] : '—';
+            el.duel.style.display = 'flex';
+
+            // выставить счёт по payload.score
+            const myScore = Number(payload.score?.[PID] ?? 0);
+            const oppKey = Object.keys(payload.score || {}).find(k => k !== PID);
+            const oppScore = Number((oppKey && payload.score[oppKey]) ?? 0);
+            stars(el.youStars, myScore, state.winsNeeded);
+            stars(el.oppStars, oppScore, state.winsNeeded);
+
+            // баннер результата
+            if (!payload.winner) {
+                setBanner('draw', 'DRAW');
+            } else if (payload.winner === PID) {
+                setBanner('win', 'YOU WIN');
+            } else {
+                setBanner('lose', 'YOU LOSE');
+            }
+
+            // блокируем переход к следующему стейту
+            state.resultLockUntil = now() + RESULT_GRACE_MS;
+
+            // через grace — применим отложенное состояние (обычно WAITING_MOVE)
+            setTimeout(() => {
+                if (state.deferred) {
+                    const t = state.deferred.type; state.deferred = null;
+                    if (t === 'WAITING_MOVE') onWaitingMove();
+                }
+            }, RESULT_GRACE_MS);
+        }
+        function onMatchOver() {
+            if (now() < state.resultLockUntil) { state.deferred = { type: 'MATCH_OVER' }; setTimeout(() => onMatchOver(), state.resultLockUntil - now() + 5); return; }
+            el.status.textContent = 'Match over';
+            el.rematch.style.display = 'inline-block';
+            setMoves(false);
+        }
+
+        // ====== Actions
+        function sendMove(code) {
+            if (!state.ws || state.ws.readyState !== 1) return;
+            if (!state.canMove) return;
+            state.canMove = false;
+            state.ws.send(code);
+            onAck();
+        }
+        function sendReady() {
+            if (!state.ws || state.ws.readyState !== 1) return;
+            state.ws.send('3'); // ClientEvent.READY
+            el.rematch.style.display = 'none';
+            el.status.textContent = 'Ready. Waiting for opponent…';
+            setBanner('', '');
+        }
+
+        // ====== Bind UI
+        document.querySelectorAll('[data-move]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.getAttribute('data-move'); // r/p/s
+                state.canMove = true; // разрешаем один клик
+                sendMove(code);
+                // локально покажем выбранный ход
+                el.youIcon.textContent = ICON[MOVES[code]];
+                el.youHint.textContent = 'You made a pick';
+            });
+        });
+        el.rematch.addEventListener('click', sendReady);
+
+        // ====== WS
+        function connect() {
+            el.status.textContent = 'Connecting…'; setMoves(false); setBanner('', ''); el.duel.style.display = 'none';
+            const ws = new WebSocket(wsURL());
+            state.ws = ws;
+
+            ws.onopen = () => { el.status.textContent = 'Connected. Waiting for state…'; };
+
+            ws.onmessage = (ev) => {
+                let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+                const { type, data } = msg;
+                if (data && data.state) { updateFromSnapshot(data); }
+
+                switch (type) {
+                    case 'JOINED': onJoined(); break;
+                    case 'WAITING_OPP': onWaitingOpp(); break;
+                    case 'WAITING_MOVE': state.canMove = true; onWaitingMove(); break;
+                    case 'ACK': onAck(); break;
+                    case 'RESULT': onResult(data); break;
+                    case 'MATCH_OVER':
+                        if (now() < state.resultLockUntil) { state.deferred = { type: 'MATCH_OVER' }; }
+                        else onMatchOver();
+                        break;
+                    case 'ERROR':
+                        el.status.textContent = (data && data.message) || 'Error';
+                        break;
+                }
+            };
+
+            ws.onclose = () => { el.status.textContent = 'Disconnected'; setMoves(false); };
+            ws.onerror = () => { el.status.textContent = 'WS error'; };
+        }
+
+        connect();
+    </script>
 </body>
 
 </html>
